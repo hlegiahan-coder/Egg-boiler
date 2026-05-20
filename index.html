@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Egg Timer — Arcade</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="react">
+      const { useState, useEffect, useRef, useCallback } = React;
+
+      // ------- config -------
+      const EGGS = {
+        soft:   { name: "SOFT BOILED",   seconds: 300, color: "pink",        image: "assets/egg-soft.png" },
+        medium: { name: "MEDIUM BOILED", seconds: 420, color: "purple",      image: "assets/egg-medium.png" },
+        hard:   { name: "HARD BOILED",   seconds: 600, color: "deeper-pink", image: "assets/egg-hard.png" },
+        custom: { name: "CUSTOM",        seconds: 180, color: "yellow", editable: true },
+      };
+      const MODE_ORDER = ["soft", "medium", "hard", "custom"];
+
+      // ------- chiptune (Web Audio) -------
+      let audioCtx = null;
+      function getCtx() {
+        if (audioCtx) return audioCtx;
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return null;
+          audioCtx = new Ctx();
+          return audioCtx;
+        } catch {
+          return null;
+        }
+      }
+      function tone(freq, startOffset, durationSec, gain = 0.08) {
+        const c = getCtx();
+        if (!c) return;
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = "square";
+        osc.frequency.value = freq;
+        osc.connect(g);
+        g.connect(c.destination);
+        const t0 = c.currentTime + startOffset;
+        g.gain.setValueAtTime(gain, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + durationSec);
+        osc.start(t0);
+        osc.stop(t0 + durationSec + 0.02);
+      }
+      function playBlip() {
+        try { tone(880, 0, 0.07, 0.05); } catch {}
+      }
+      function playFinish() {
+        try {
+          // Repeat the C–E–G arpeggio 3 times so it actually sounds like an alarm.
+          const cycle = 0.9; // seconds between repeat starts
+          for (let i = 0; i < 3; i++) {
+            const t = i * cycle;
+            tone(523.25, t + 0.0, 0.18, 0.14);
+            tone(659.25, t + 0.2, 0.18, 0.14);
+            tone(783.99, t + 0.4, 0.34, 0.16);
+          }
+        } catch {}
+      }
+
+      // ------- useEggTimer hook -------
+      function useEggTimer(mode) {
+        const cfg = EGGS[mode];
+        const isCustom = !!cfg?.editable;
+        const initialSeconds = cfg?.seconds ?? 0;
+
+        const [minutes, setMinutes] = useState(Math.floor(initialSeconds / 60));
+        const [seconds, setSeconds] = useState(initialSeconds % 60);
+        const totalMs = (minutes * 60 + seconds) * 1000;
+
+        const [remainingMs, setRemainingMs] = useState(totalMs);
+        const [status, setStatus] = useState("idle");
+
+        const rafRef = useRef(null);
+        const startedAtRef = useRef(0);
+        const baseMsRef = useRef(0);
+
+        const cancelRaf = () => {
+          if (rafRef.current != null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+          }
+        };
+
+        // Reset everything when mode changes
+        useEffect(() => {
+          cancelRaf();
+          const nextCfg = EGGS[mode];
+          const nextSeconds = nextCfg?.seconds ?? 0;
+          setMinutes(Math.floor(nextSeconds / 60));
+          setSeconds(nextSeconds % 60);
+          setRemainingMs(nextSeconds * 1000);
+          setStatus("idle");
+        }, [mode]);
+
+        // When configured duration changes while idle (custom stepper), mirror it
+        useEffect(() => {
+          if (status === "idle") setRemainingMs(totalMs);
+        }, [totalMs, status]);
+
+        useEffect(() => () => cancelRaf(), []);
+
+        const tick = useCallback((now) => {
+          const elapsed = now - startedAtRef.current;
+          const next = Math.max(0, baseMsRef.current - elapsed);
+          setRemainingMs(next);
+          if (next === 0) {
+            cancelRaf();
+            setStatus("done");
+            playFinish();
+            return;
+          }
+          rafRef.current = requestAnimationFrame(tick);
+        }, []);
+
+        const start = useCallback(() => {
+          setStatus((prev) => {
+            if (prev === "running") return prev;
+            setRemainingMs((cur) => {
+              const startFrom = cur === 0 ? totalMs : cur;
+              baseMsRef.current = startFrom;
+              startedAtRef.current = performance.now();
+              rafRef.current = requestAnimationFrame(tick);
+              return startFrom;
+            });
+            return "running";
+          });
+        }, [totalMs, tick]);
+
+        const pause = useCallback(() => {
+          setStatus((prev) => {
+            if (prev !== "running") return prev;
+            cancelRaf();
+            return "paused";
+          });
+        }, []);
+
+        const reset = useCallback(() => {
+          cancelRaf();
+          setRemainingMs(totalMs);
+          setStatus("idle");
+        }, [totalMs]);
+
+        const updateMinutes = useCallback((v) => {
+          if (!isCustom || status === "running") return;
+          setMinutes(v);
+          if (status !== "idle") setStatus("idle");
+        }, [isCustom, status]);
+
+        const updateSeconds = useCallback((v) => {
+          if (!isCustom || status === "running") return;
+          setSeconds(v);
+          if (status !== "idle") setStatus("idle");
+        }, [isCustom, status]);
+
+        const canStart = (status === "idle" || status === "paused") && totalMs > 0;
+
+        return {
+          remainingMs, totalMs, status, minutes, seconds, isCustom, canStart,
+          start, pause, reset,
+          setMinutes: updateMinutes,
+          setSeconds: updateSeconds,
+        };
+      }
+
+      function formatMs(ms) {
+        const totalSec = Math.max(0, Math.ceil(ms / 1000));
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+
+      // ------- PixelButton -------
+      function PixelButton({
+        color = "paper",
+        className = "",
+        onClick,
+        silent = false,
+        type = "button",
+        children,
+        ...rest
+      }) {
+        const handleClick = (e) => {
+          if (!silent) playBlip();
+          onClick?.(e);
+        };
+        return (
+          <button
+            type={type}
+            className={`pixel-btn pixel-btn--${color} ${className}`.trim()}
+            onClick={handleClick}
+            {...rest}
+          >
+            {children}
+          </button>
+        );
+      }
+
+      // ------- Stepper -------
+      function Stepper({ label, value, onChange, min = 0, max = 59, disabled = false }) {
+        const step = (delta) => {
+          const next = Math.min(max, Math.max(min, value + delta));
+          if (next !== value) onChange(next);
+        };
+        return (
+          <div className="stepper-block">
+            <span className="stepper-label">{label}</span>
+            <div className="stepper-row">
+              <PixelButton
+                color="paper"
+                onClick={() => step(-1)}
+                disabled={disabled || value <= min}
+                aria-label={`Decrease ${label}`}
+              >
+                −
+              </PixelButton>
+              <span className="stepper-value" aria-live="polite">
+                {String(value).padStart(2, "0")}
+              </span>
+              <PixelButton
+                color="paper"
+                onClick={() => step(1)}
+                disabled={disabled || value >= max}
+                aria-label={`Increase ${label}`}
+              >
+                +
+              </PixelButton>
+            </div>
+          </div>
+        );
+      }
+
+      // ------- Landing -------
+      function previewTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return s === 0 ? `${m} MIN` : `${m}:${String(s).padStart(2, "0")}`;
+      }
+
+      function Landing({ onSelect }) {
+        return (
+          <section className="screen screen--landing" aria-label="Choose egg doneness">
+            <header className="landing-header">
+              <h1 className="landing-title">EGG TIMER</h1>
+              <p className="landing-subtitle">
+                HOW WOULD YOU LIKE YOUR EGG YOLK TO BE?
+              </p>
+            </header>
+            <div className="landing-choices">
+              {MODE_ORDER.map((id) => {
+                const egg = EGGS[id];
+                return (
+                  <PixelButton
+                    key={id}
+                    color={egg.color}
+                    className="landing-choice"
+                    onClick={() => onSelect(id)}
+                  >
+                    {egg.image ? (
+                      <img className="landing-choice-img" src={egg.image} alt="" />
+                    ) : (
+                      <span className="landing-choice-img landing-choice-img--placeholder" aria-hidden="true">
+                        <span className="placeholder-mark">?</span>
+                      </span>
+                    )}
+                    <span className="landing-choice-text">
+                      <span className="landing-choice-name">{egg.name}</span>
+                      <span className="landing-choice-time">
+                        {egg.editable ? "SET YOUR OWN" : previewTime(egg.seconds)}
+                      </span>
+                    </span>
+                  </PixelButton>
+                );
+              })}
+            </div>
+          </section>
+        );
+      }
+
+      // ------- TimerScreen -------
+      function statusText(status, name) {
+        switch (status) {
+          case "running": return "BOILING…";
+          case "paused":  return "PAUSED";
+          case "done":    return `${name} READY!`;
+          case "idle":
+          default:        return "READY";
+        }
+      }
+      function statusClass(status) {
+        if (status === "running") return "is-running";
+        if (status === "done") return "is-done";
+        return "";
+      }
+
+      function TimerScreen({ mode, onBack }) {
+        const cfg = EGGS[mode];
+        const t = useEggTimer(mode);
+
+        useEffect(() => {
+          const onKey = (e) => {
+            const tag = e.target?.tagName;
+            const onInteractive = tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA";
+            if (e.code === "Escape") {
+              e.preventDefault();
+              onBack();
+              return;
+            }
+            if (onInteractive) return;
+            if (e.code === "Space") {
+              e.preventDefault();
+              if (t.status === "running") t.pause();
+              else if (t.canStart) t.start();
+            } else if (e.code === "KeyR") {
+              e.preventDefault();
+              t.reset();
+            }
+          };
+          document.addEventListener("keydown", onKey);
+          return () => document.removeEventListener("keydown", onKey);
+        }, [t, onBack]);
+
+        const running = t.status === "running";
+
+        return (
+          <section
+            className={`screen screen--timer screen--${cfg.color}`}
+            aria-label={`${cfg.name} timer`}
+          >
+            <div className="timer-top">
+              <button type="button" className="btn-back" onClick={onBack}>
+                ‹ BACK
+              </button>
+            </div>
+
+            <div className="timer-display" aria-live="polite" aria-atomic="true">
+              <time className="time">{formatMs(t.remainingMs)}</time>
+              <p className="timer-name">{cfg.name}</p>
+              <p className={`status ${statusClass(t.status)}`}>
+                {statusText(t.status, cfg.name)}
+              </p>
+            </div>
+
+            {t.isCustom && (
+              <div className="steppers">
+                <Stepper
+                  label="MIN" value={t.minutes} onChange={t.setMinutes}
+                  min={0} max={59} disabled={running}
+                />
+                <Stepper
+                  label="SEC" value={t.seconds} onChange={t.setSeconds}
+                  min={0} max={59} disabled={running}
+                />
+              </div>
+            )}
+
+            <div className="controls">
+              <PixelButton color={cfg.color} onClick={t.start} disabled={!t.canStart}>
+                START
+              </PixelButton>
+              <PixelButton color="paper" onClick={t.pause} disabled={!running}>
+                PAUSE
+              </PixelButton>
+              <PixelButton
+                color="paper"
+                className="full"
+                onClick={t.reset}
+                disabled={t.status === "idle" && t.remainingMs === t.totalMs}
+              >
+                RESET
+              </PixelButton>
+            </div>
+          </section>
+        );
+      }
+
+      // ------- App -------
+      function App() {
+        const [mode, setMode] = useState(null);
+        return (
+          <main className="app">
+            {mode === null ? (
+              <Landing onSelect={setMode} />
+            ) : (
+              <TimerScreen key={mode} mode={mode} onBack={() => setMode(null)} />
+            )}
+          </main>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

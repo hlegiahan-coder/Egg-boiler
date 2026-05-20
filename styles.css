@@ -1,0 +1,425 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --frame-max-w: 400px;
+  --frame-max-h: 700px;
+  --frame-shadow: 10px;
+  --frame-pad: 80px;
+  --frame-w: min(
+    var(--frame-max-w),
+    calc(100vw - var(--frame-pad) - var(--frame-shadow))
+  );
+  --frame-h: min(
+    var(--frame-max-h),
+    calc(100svh - var(--frame-pad) - var(--frame-shadow))
+  );
+
+  --landing-bg: #fff4a3;
+
+  --pink-bg: #ffd1e8;
+  --pink-accent: #ff7eb9;
+
+  --purple-bg: #d9c2ff;
+  --purple-accent: #9b6dff;
+
+  --deeper-pink-bg: #ffb3d9;
+  --deeper-pink-accent: #ff5ca8;
+
+  --yellow-bg: #ffe9a3;
+  --yellow-accent: #ffb800;
+
+  --ink: #2a1a3a;
+  --paper: #fffbe6;
+
+  --status-muted: #5a4a6a;
+  --status-running: #007a3d;
+  --status-done: #c10063;
+
+  --font: "Press Start 2P", "Courier New", monospace;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font);
+  color: var(--ink);
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100svh;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #ffe0f0 0 12px,
+      #ffd0e8 12px 24px
+    );
+  padding: 0;
+  overflow: hidden;
+}
+
+.app {
+  width: 200px;
+  height: 400px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 4px solid var(--ink);
+  box-shadow: 10px 10px 0 var(--ink);
+  background: var(--landing-bg);
+  container-type: inline-size;
+  container-name: frame;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(12px, 5cqi, 20px) clamp(10px, 4.5cqi, 18px)
+    clamp(14px, 5.5cqi, 22px);
+  overflow: hidden;
+}
+
+/* ------- Landing ------- */
+
+.screen--landing {
+  background: var(--landing-bg);
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.landing-header {
+  text-align: center;
+  margin-bottom: clamp(20px, 6cqi, 36px);
+}
+
+.landing-title {
+  margin: 0;
+  font-size: clamp(22px, 8.5cqi, 36px);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--deeper-pink-accent);
+  text-shadow:
+    3px 0 0 var(--ink),
+    -3px 0 0 var(--ink),
+    0 3px 0 var(--ink),
+    0 -3px 0 var(--ink),
+    3px 3px 0 var(--ink),
+    -3px -3px 0 var(--ink),
+    3px -3px 0 var(--ink),
+    -3px 3px 0 var(--ink),
+    6px 6px 0 var(--purple-accent);
+  letter-spacing: 1px;
+}
+
+.landing-subtitle {
+  margin: clamp(14px, 5cqi, 22px) 0 0;
+  font-size: clamp(9px, 3.25cqi, 15px);
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+.landing-choices {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 4cqi, 16px);
+  margin-top: 0;
+}
+
+/* ------- Timer screens ------- */
+
+.screen--timer {
+  gap: 8px;
+}
+
+.screen--pink {
+  background: var(--pink-bg);
+}
+.screen--purple {
+  background: var(--purple-bg);
+}
+.screen--deeper-pink {
+  background: var(--deeper-pink-bg);
+}
+.screen--yellow {
+  background: var(--yellow-bg);
+}
+
+.timer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-back {
+  font-family: inherit;
+  font-size: clamp(8px, 2.5cqi, 10px);
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 6px 4px;
+  letter-spacing: 1px;
+}
+
+.btn-back:hover {
+  color: var(--deeper-pink-accent);
+}
+
+.egg-mark {
+  font-size: clamp(20px, 7cqi, 28px);
+  line-height: 1;
+}
+
+.timer-display {
+  text-align: center;
+  margin-top: auto;
+}
+
+.time {
+  display: block;
+  font-family: inherit;
+  font-size: clamp(40px, 14cqi, 56px);
+  line-height: 1;
+  color: var(--paper);
+  text-shadow:
+    3px 0 0 var(--ink),
+    -3px 0 0 var(--ink),
+    0 3px 0 var(--ink),
+    0 -3px 0 var(--ink),
+    3px 3px 0 var(--ink),
+    -3px -3px 0 var(--ink),
+    3px -3px 0 var(--ink),
+    -3px 3px 0 var(--ink),
+    6px 6px 0 rgba(42, 26, 58, 0.35);
+  letter-spacing: 2px;
+}
+
+.timer-name {
+  margin: clamp(10px, 4.5cqi, 18px) 0 0;
+  font-size: clamp(11px, 3.5cqi, 14px);
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.status {
+  margin: clamp(6px, 2.5cqi, 10px) 0 0;
+  font-size: clamp(8px, 2.5cqi, 10px);
+  letter-spacing: 1px;
+  color: var(--status-muted);
+}
+
+.status.is-running {
+  color: var(--status-running);
+}
+
+.status.is-done {
+  color: var(--status-done);
+  animation: blink 0.6s steps(2) infinite;
+}
+
+@keyframes blink {
+  to {
+    opacity: 0.25;
+  }
+}
+
+/* ------- Stepper (custom mode) ------- */
+
+.steppers {
+  margin-top: clamp(10px, 4.5cqi, 18px);
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 3.5cqi, 14px);
+}
+
+.stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepper-label {
+  font-size: clamp(8px, 2.25cqi, 9px);
+  letter-spacing: 1px;
+  color: var(--ink);
+}
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 2cqi, 8px);
+}
+
+.stepper-value {
+  display: inline-block;
+  min-width: clamp(28px, 9.5cqi, 38px);
+  text-align: center;
+  font-size: clamp(14px, 4.5cqi, 18px);
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  padding: 6px 4px;
+  color: var(--ink);
+}
+
+/* ------- Controls ------- */
+
+.controls {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 2.5cqi, 10px);
+}
+
+.controls .pixel-btn.full {
+  grid-column: 1 / -1;
+}
+
+/* ------- PixelButton ------- */
+
+.pixel-btn {
+  font-family: inherit;
+  font-size: clamp(10px, 3cqi, 12px);
+  letter-spacing: 1px;
+  border: clamp(2px, 1cqi, 4px) solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  padding: clamp(8px, 3cqi, 12px) clamp(6px, 2.5cqi, 10px);
+  cursor: pointer;
+  box-shadow: clamp(4px, 1.5cqi, 6px) clamp(4px, 1.5cqi, 6px) 0 var(--ink);
+  transition: transform 60ms steps(2), box-shadow 60ms steps(2);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.pixel-btn:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.pixel-btn:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: clamp(2px, 0.75cqi, 3px) clamp(2px, 0.75cqi, 3px) 0 var(--ink);
+}
+
+.pixel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: clamp(3px, 1cqi, 4px) clamp(3px, 1cqi, 4px) 0 var(--ink);
+}
+
+.pixel-btn--pink {
+  background: var(--pink-accent);
+  color: var(--ink);
+}
+.pixel-btn--purple {
+  background: var(--purple-accent);
+  color: var(--paper);
+}
+.pixel-btn--deeper-pink {
+  background: var(--deeper-pink-accent);
+  color: var(--paper);
+}
+.pixel-btn--yellow {
+  background: var(--yellow-accent);
+  color: var(--ink);
+}
+.pixel-btn--paper {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Landing buttons get a bit bigger */
+.landing-choice {
+  font-size: clamp(11px, 3.5cqi, 14px);
+  padding: clamp(8px, 2.75cqi, 10px) clamp(10px, 3.5cqi, 14px);
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 3.5cqi, 14px);
+  text-align: left;
+}
+
+.landing-choice-img {
+  width: clamp(42px, 14cqi, 56px);
+  height: clamp(42px, 14cqi, 56px);
+  object-fit: contain;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(2px 2px 0 var(--ink));
+}
+
+.landing-choice-img--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  color: var(--ink);
+  font-size: clamp(20px, 7cqi, 28px);
+  line-height: 1;
+  filter: none;
+  padding: 0;
+}
+
+/* Press Start 2P glyphs sit in the upper-left of their cell with right/bottom
+   whitespace baked into the character. translate to optically recenter. */
+.placeholder-mark {
+  display: inline-block;
+  transform: translate(8%, 7%);
+}
+
+.landing-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.landing-choice-name {
+  font-size: clamp(10px, 3.25cqi, 13px);
+  line-height: 1.1;
+}
+
+.landing-choice-time {
+  font-size: clamp(7px, 2.25cqi, 9px);
+  opacity: 0.85;
+  letter-spacing: 1px;
+}
+
+/* Stepper inner buttons */
+.stepper .pixel-btn {
+  font-size: clamp(11px, 3.5cqi, 14px);
+  padding: 4px clamp(6px, 2.5cqi, 10px);
+  box-shadow: clamp(3px, 1cqi, 4px) clamp(3px, 1cqi, 4px) 0 var(--ink);
+}
+
+.stepper .pixel-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Stepper rows row + label arrangement */
+.stepper-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-btn,
+  .status.is-done {
+    transition: none;
+    animation: none;
+  }
+}
